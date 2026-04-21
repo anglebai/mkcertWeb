@@ -671,35 +671,7 @@
         <div id="alerts-container"></div>
     </div>
 
-    <!-- Configuration Modal -->
-    <div id="config-modal" class="config-modal">
-        <div class="config-modal-content">
-            <div class="config-modal-header">
-                <h2><i class="fas fa-cog"></i> Current Running Configuration</h2>
-                <button class="config-modal-close" id="config-modal-close">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="config-modal-body">
-                <p style="margin-bottom: 15px; color: var(--text-dim); font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Courier New', monospace;">
-                    This displays the actual configuration currently running on the server. 
-                    Changes require a server restart to take effect.
-                </p>
-                <div class="config-display">
-                    <pre id="config-content">Loading...</pre>
-                </div>
-                <div class="config-actions">
-                    <button type="button" id="copy-config-btn" class="btn btn-secondary">
-                        <i class="fas fa-copy"></i> Copy to Clipboard
-                    </button>
-                    <button type="button" id="download-config-btn" class="btn btn-outline">
-                        <i class="fas fa-download"></i> Download JSON
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <script src="i18n-minimal.js"></script>
     <script src="settings.js"></script>
 </body>
 </html>

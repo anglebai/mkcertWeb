@@ -724,9 +724,6 @@ section h2::before {
 
 /* Buttons */
 .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
     padding: 0.75rem 1.5rem;
     border: none;
     border-radius: 6px;
@@ -1811,10 +1808,6 @@ section h2::before {
     cursor: pointer;
     transition: all 0.3s ease;
     text-decoration: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
     margin-top: 0;
     box-sizing: border-box;
 }
@@ -2170,9 +2163,6 @@ section h2::before {
 }
 
 .status-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
     padding: 0.3rem 0.8rem;
     border-radius: 1rem;
     font-size: 0.85rem;
