@@ -1,1 +1,113 @@
+# 定义工作流的名称，显示在 GitHub Actions 界面中
+name: Build Docker Image for Aliyun ACR
 
+# 定义触发工作流的事件条件
+on:
+  push:
+    # 当向 main 分支推送代码时触发
+    branches: [main]
+    # 当推送符合 "v*" (如 v1.0) 或 "*.*.*" (如 1.0.0) 格式的标签时触发
+    tags: ["v*", "*.*.*"]
+  pull_request:
+    # 当向 main 分支发起拉取请求时触发（通常用于测试构建，不推送）
+    branches: [main]
+  # 允许在 GitHub 界面手动触发工作流
+  workflow_dispatch: {}
+
+# 并发控制配置，防止同一分支的多次运行同时执行，节省资源
+concurrency:
+  # 定义并发组，基于当前引用的分支或标签名称
+  group: ci-${{ github.ref }}
+  # 如果新的一次运行开始，则自动取消正在进行的同组运行
+  cancel-in-progress: true
+
+# 定义环境变量，可在整个工作流中引用
+env:
+  # 从 GitHub Secrets 获取阿里云 ACR 的注册表地址（如 registry.cn-hangzhou.aliyuncs.com）
+  ACR_REGISTRY: ${{ secrets.ALIYUN_REPO }}
+  # 从 GitHub Secrets 获取阿里云 ACR 的命名空间
+  ACR_NAMESPACE: ${{ secrets.ALIYUN_NAME_SPACE }}
+  # 定义镜像名称
+  IMAGE_NAME: mkcertweb
+
+# 定义作业（Job），包含一系列步骤
+jobs:
+  build-and-push:
+    # 作业在 GitHub 界面显示的名称
+    name: Build and Push to Aliyun ACR
+    # 指定运行器环境为最新的 Ubuntu Linux
+    runs-on: ubuntu-latest
+    # 条件判断：如果不是拉取请求事件，则执行此作业（即 PR 只构建不推送，或可根据需求调整）
+    if: github.event_name != 'pull_request'
+    # 设置权限，最小化原则，仅赋予读取内容和写入包所需的权限（此处主要为了安全规范，实际推送由 login-action 处理）
+    permissions:
+      contents: read
+    
+    # 作业的具体步骤列表
+    steps:
+      # 步骤 1: 检出代码仓库
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 步骤 2: 设置 QEMU 模拟器
+      - name: Set up QEMU
+      # 作用：允许在 x86_64 运行器上模拟其他架构（如 ARM64），用于多架构构建
+        uses: docker/setup-qemu-action@v3
+
+      # 步骤 3: 设置 Docker Buildx
+      - name: Set up Docker Buildx
+      # 作用：启用 Docker 的构建工具包 Buildx，支持多平台构建和高级缓存功能
+        uses: docker/setup-buildx-action@v3
+
+      # 步骤 4: 登录到阿里云容器镜像服务 (ACR)
+      - name: Log in to Aliyun ACR
+        uses: docker/login-action@v3
+        with:
+          # 指定登录的 registry 地址，引用之前定义的环境变量
+          registry: ${{ env.ACR_REGISTRY }}
+          # 使用 Secrets 中的用户名进行认证
+          username: ${{ secrets.ALIYUN_REGISTRY_USER }}
+          # 使用 Secrets 中的密码（或固定密码）进行认证
+          password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
+
+      # 步骤 5: 生成 Docker 镜像的元数据（标签和标签）
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # 定义镜像的完整名称路径：registry/namespace/image_name
+          images: |
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ env.IMAGE_NAME }}
+          # 定义标签生成规则
+          tags: |
+            # 规则 1: 如果是 main 分支，添加 'latest' 标签；否则不添加
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            # 规则 2: 添加 Git commit 的短 SHA 作为标签（用于唯一标识版本）
+            type=sha
+            # 规则 3: 如果是 tag 触发的事件，直接使用 tag 名称作为镜像标签（如 v1.0.0）
+            type=ref,event=tag
+          # 定义镜像标签（Labels），遵循 OCI 标准
+          labels: |
+            # 记录源代码仓库地址
+            org.opencontainers.image.source=${{ github.repository }}
+
+      # 步骤 6: 构建并推送 Docker 镜像
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          # 构建上下文：当前目录
+          context: .
+          # 指定 Dockerfile 的路径
+          file: ./Dockerfile
+          # 指定构建的目标平台：Linux AMD64 (x86_64) 和 Linux ARM64 (如 Apple Silicon, AWS Graviton)
+          platforms: linux/amd64,linux/arm64
+          # 设置为 true，构建完成后自动推送到 Registry
+          push: true
+          # 使用上一步 'meta' 生成的标签列表
+          tags: ${{ steps.meta.outputs.tags }}
+          # 使用上一步 'meta' 生成的标签元数据
+          labels: ${{ steps.meta.outputs.labels }}
+          # 缓存导入：使用 GitHub Actions 缓存后端加速构建
+          cache-from: type=gha
+          # 缓存导出：将构建层缓存到 GitHub Actions 缓存后端，模式为 max（缓存所有层）
+          cache-to: type=gha,mode=max
