@@ -26,7 +26,7 @@ COPY package*.json ./
 
 # Install dependencies
 RUN npm install --only=production && npm cache clean --force
-
+VOLUME ["/app/public"]
 # Copy application code
 COPY . .
 
@@ -35,7 +35,7 @@ RUN mkdir -p /app/certificates /app/data \
     && mkdir -p /home/nodejs/.local/share/mkcert \
     && cp -r /root/.local/share/mkcert/* /home/nodejs/.local/share/mkcert/ 2>/dev/null || echo "CA files copied" \
     && chown -R nodejs:nodejs /app /home/nodejs/.local
-VOLUME ["/app/public"]
+
 # Switch to non-root user
 USER nodejs
 
