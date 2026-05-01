@@ -26,7 +26,7 @@ COPY package*.json ./
 
 # Install dependencies
 RUN npm install --only=production && npm cache clean --force
-VOLUME ["/app/public"]
+
 # Copy application code
 COPY . .
 
